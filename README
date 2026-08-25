@@ -1,0 +1,154 @@
+# Plataforma de Eventos de Artes Marciales
+
+API REST desarrollada para gestionar una plataforma de eventos, categorías,
+usuarios e inscripciones o reservas relacionadas con artes marciales.
+
+Esta primera pre-entrega establece una arquitectura organizada por capas,
+preparada para incorporar autenticación, autorización, persistencia, gestión de
+cupos e inscripciones en entregas posteriores.
+
+## Tecnologías
+
+- Node.js
+- Express
+- MongoDB
+- Mongoose
+- dotenv
+- Nodemon
+- ECMAScript Modules (ESM)
+
+## Requisitos
+
+- Node.js 18 o superior
+- npm
+- MongoDB, para las próximas etapas
+
+## Instalación
+
+Clonar el repositorio:
+
+```bash
+git clone URL_DEL_REPOSITORIO
+cd plataforma-eventos-artes-marciales
+```
+
+Instalar las dependencias:
+
+```bash
+npm install
+```
+
+## Variables de entorno
+
+Crear un archivo `.env` en la raíz del proyecto tomando como referencia
+`.env.example`:
+
+```env
+PORT=8080
+NODE_ENV=development
+MONGO_URL=mongodb://127.0.0.1:27017/plataforma_eventos
+JWT_SECRET=reemplazar_por_un_secreto_seguro
+```
+
+| Variable | Descripción |
+| --- | --- |
+| `PORT` | Puerto utilizado por el servidor |
+| `NODE_ENV` | Entorno de ejecución |
+| `MONGO_URL` | Dirección de conexión a MongoDB |
+| `JWT_SECRET` | Secreto que se utilizará para los tokens JWT |
+
+El archivo `.env` contiene información local y no debe subirse al repositorio.
+
+## Ejecución
+
+Modo desarrollo:
+
+```bash
+npm run dev
+```
+
+Modo normal:
+
+```bash
+npm start
+```
+
+El servidor se ejecutará de manera predeterminada en:
+
+```text
+http://localhost:8080
+```
+
+## Estructura del proyecto
+
+```text
+src/
+├── app.js
+├── server.js
+├── config/
+├── routes/
+├── controllers/
+├── services/
+├── repositories/
+├── dao/
+├── models/
+├── middlewares/
+└── utils/
+```
+
+- `config`: configuración de la aplicación y variables de entorno.
+- `routes`: definición de los endpoints.
+- `controllers`: procesamiento de solicitudes y respuestas HTTP.
+- `services`: reglas y lógica de negocio.
+- `repositories`: abstracción del acceso a datos.
+- `dao`: operaciones directas sobre las fuentes de datos.
+- `models`: esquemas y modelos del dominio.
+- `middlewares`: funciones intermedias de Express.
+- `utils`: utilidades reutilizables.
+
+## Rutas disponibles
+
+### Estado del servidor
+
+```http
+GET /api/health
+```
+
+Respuesta:
+
+```json
+{
+  "status": "ok",
+  "message": "Servidor activo"
+}
+```
+
+### Obtener eventos
+
+```http
+GET /api/events
+```
+
+Respuesta inicial:
+
+```json
+{
+  "status": "success",
+  "payload": []
+}
+```
+
+### Estructura inicial de sesiones
+
+```http
+GET /api/sessions
+```
+
+Esta ruta es únicamente una estructura inicial. Todavía no implementa registro,
+inicio de sesión ni autenticación.
+
+## Estado actual
+
+La aplicación contiene la base arquitectónica de la API. La autenticación,
+JWT, roles, autorización, persistencia de eventos, inscripciones, control de
+cupos y notificaciones se implementarán en próximas entregas.

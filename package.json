@@ -1,0 +1,22 @@
+{
+  "name": "plataforma-eventos-artes-marciales",
+  "version": "1.0.0",
+  "description": "API REST para la gestión de eventos e inscripciones de artes marciales",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "mongoose": "^9.9.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
