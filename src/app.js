@@ -1,6 +1,6 @@
-import { express } from "express";
-import { apiRouter } from "./routes/index.routes.js";
-import { notFoundMiddleware } from './middlewares/not-found.middleware.js'
+import  express  from "express";
+import  apiRouter  from "./routes/index.routes.js";
+import  notFoundMiddleware  from './middlewares/not-found.middleware.js'
 import errorMiddleware from './middlewares/error.middleware.js'
 
 const app = express();
