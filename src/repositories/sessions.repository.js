@@ -6,6 +6,10 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
 
 class SessionsService {
+    async getStatus() {
+        return { message: 'Estructura de sesiones disponible' };
+    }
+
     async register(data) {
         const firstName =
         typeof data.first_name === 'string' ? data.first_name.trim() : '';
@@ -43,16 +47,16 @@ class SessionsService {
 
         try {
             const user = await usersRepository.create({
-                first_name: firstName,
-                last_name: lastName,
+                firstName,
+                lastName,
                 email,
                 password: hashedPassword,
             });
 
             return {
                 id: user._id.toString(),
-                first_name: user.first_name,
-                last_name: user.last_name,
+                first_name: user.firstName,
+                last_name: user.lastName,
                 email: user.email,
                 role: user.role,
             };

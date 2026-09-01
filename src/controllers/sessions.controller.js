@@ -20,7 +20,36 @@ export const register = async (req, res, next) => {
             status: 'success',
             payload: user,
         });
-    }catch (error) {
+    } catch (error) {
         next(error);
     }
-}
+};
+
+export const login = async (req, res, next) => {
+    try {
+        const token = await sessionsService.login(req.body);
+
+        res.cookie('currentUser', token, sessionsService.cookieOptions());
+        res.status(200).json({
+            status: 'success',
+            message: 'Login correcto',
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const current = (req, res) => {
+    res.status(200).json({
+        status: 'success',
+        payload: req.user,
+    });
+};
+
+export const logout = (req, res) => {
+    res.clearCookie('currentUser', sessionsService.cookieOptions());
+    res.status(200).json({
+        status: 'success',
+        message: 'Sesión cerrada',
+    });
+};

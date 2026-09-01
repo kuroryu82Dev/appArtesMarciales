@@ -1,7 +1,7 @@
 import  mongoose  from "mongoose";
 import env from "./env.config.js";
 
-export const connectDatabase = async () =>{
+const connectDatabase = async () =>{
     try {
         await mongoose.connect(env.mongoUrl)
         console.log('Conexión a la base de datos establecida');
@@ -10,3 +10,5 @@ export const connectDatabase = async () =>{
         throw error;
     }
 }
+
+export default connectDatabase;
