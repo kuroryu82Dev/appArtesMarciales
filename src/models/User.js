@@ -18,19 +18,22 @@ const userSchema = new mongoose.Schema(
             unique: true,
             lowercase: true,
             trim: true,
+            index: true,
         },
         password: {
             type: String,
             required: true,
+            select: false, // Exclude password from query results by default
         },
         role: {
             type: String,
-            enum: ['user', 'admin'],
+            enum: ['user', 'admin','organizer'],
             default: 'user',
         },
     },
     {
         timestamps: true,
+        versionKey: false, // Disable the __v field
     },
 );
 

@@ -12,3 +12,15 @@ export const getSessionStatus = async (req, res, next) => {
     next(error);
     }
 };
+
+export const register = async (req, res, next) => {
+    try {
+        const user = await sessionsService.register(req.body);
+        res.status(201).json({
+            status: 'success',
+            payload: user,
+        });
+    }catch (error) {
+        next(error);
+    }
+}
