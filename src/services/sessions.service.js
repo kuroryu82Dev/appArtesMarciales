@@ -1,13 +1,17 @@
 import sessionsRepository from '../repositories/sessions.repository.js';
 import usersRepository from '../repositories/users.repository.js';
 import env from '../config/env.config.js';
-import isValidPassword from '../utils/hash.js';
-import generateToken from '../utils/jwt.js';
+import { isValidPassword } from '../utils/hash.js';
+import { generateToken } from '../utils/jwt.js';
 import HttpError from '../utils/http-error.js';
 
 class SessionsService {
     async getStatus() {
         return sessionsRepository.getStatus();
+    }
+
+    async register(data = {}) {
+        return sessionsRepository.register(data);
     }
 
     async login(data = {}) {

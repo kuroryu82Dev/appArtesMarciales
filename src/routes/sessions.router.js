@@ -1,5 +1,5 @@
-import  Router  from 'express';
-import {current, getSessionStatus, login, logout, register} from '../controllers/sessions.controller.js';
+import { Router } from 'express';
+import { current, getSessionStatus, login, logout, register } from '../controllers/sessions.controller.js';
 import authMiddleware from '../middlewares/auth.middleware.js';
 
 const router = Router();

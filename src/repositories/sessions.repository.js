@@ -1,13 +1,14 @@
 import usersRepository from '../repositories/users.repository.js';
+import sessionsDao from '../dao/sessions.dao.js';
 import { createHash } from '../utils/hash.js';
 import HttpError from '../utils/http-error.js';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
 
-class SessionsService {
+class SessionsRepository {
     async getStatus() {
-        return { message: 'Estructura de sesiones disponible' };
+        return sessionsDao.getStatus();
     }
 
     async register(data) {
@@ -70,4 +71,4 @@ class SessionsService {
     }
 }
 
-export default new SessionsService();
+export default new SessionsRepository();
