@@ -47,6 +47,11 @@ class SessionsService {
             maxAge: 3600000,
         };
     }
+
+    clearCookieOptions() {
+        const { maxAge, ...options } = this.cookieOptions();
+        return options;
+    }
 }
 
 export default new SessionsService();

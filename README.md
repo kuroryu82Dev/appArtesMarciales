@@ -136,7 +136,9 @@ Response `200`:
 }
 ```
 
-La respuesta elimina `currentUser` usando las mismas opciones de la cookie de login.
+La respuesta elimina `currentUser` usando las mismas opciones de seguridad de la
+cookie de login. Al borrarla no se reutiliza `maxAge`, para que el navegador la
+expire inmediatamente.
 
 ## Prueba completa con curl
 

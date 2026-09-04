@@ -47,7 +47,7 @@ export const current = (req, res) => {
 };
 
 export const logout = (req, res) => {
-    res.clearCookie('currentUser', sessionsService.cookieOptions());
+    res.clearCookie('currentUser', sessionsService.clearCookieOptions());
     res.status(200).json({
         status: 'success',
         message: 'Sesión cerrada',
