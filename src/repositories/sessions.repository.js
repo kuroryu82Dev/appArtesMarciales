@@ -48,16 +48,16 @@ class SessionsRepository {
 
         try {
             const user = await usersRepository.create({
-                firstName,
-                lastName,
+                first_name: firstName,
+                last_name: lastName,
                 email,
                 password: hashedPassword,
             });
 
             return {
                 id: user._id.toString(),
-                first_name: user.firstName,
-                last_name: user.lastName,
+                first_name: user.first_name,
+                last_name: user.last_name,
                 email: user.email,
                 role: user.role,
             };
