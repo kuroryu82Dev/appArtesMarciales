@@ -13,3 +13,8 @@ export const generateToken = (payload) =>
     jwt.sign(payload, getSecret(), { expiresIn: env.jwtExpiresIn });
 
 export const verifyToken = (token) => jwt.verify(token, getSecret());
+
+export default {
+    generateToken,
+    verifyToken,
+};
