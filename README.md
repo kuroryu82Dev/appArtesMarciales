@@ -195,6 +195,42 @@ en `passport.config.js`, sin modificar `app.js`.
 | `JWT_SECRET` | Clave utilizada para firmar y validar JWT. |
 | `JWT_EXPIRES_IN` | Duración del JWT, por ejemplo `1h`. |
 
+## Roles y autorización
+
+El modelo admite los roles `user`, `organizer` y `admin`. El registro público
+siempre crea un `user`: cualquier valor enviado en `role` se ignora. Los roles
+con privilegios se asignan mediante un proceso administrativo.
+
+| Acción | user | organizer | admin |
+| --- | :---: | :---: | :---: |
+| Consultar eventos publicados | ✅ | ✅ | ✅ |
+| Crear eventos | ❌ | ✅ | ✅ |
+| Modificar o cancelar eventos propios | ❌ | ✅ | ✅ |
+| Modificar cualquier evento | ❌ | ❌ | ✅ |
+| Ver todos los usuarios | ❌ | ❌ | ✅ |
+
+### Rutas protegidas
+
+| Método | Ruta | Acceso |
+| --- | --- | --- |
+| GET | `/api/sessions/current` | Cualquier usuario autenticado |
+| POST | `/api/events` | `organizer`, `admin` |
+| PATCH | `/api/events/:id` | `organizer` propietario, o `admin` |
+| GET | `/api/users` | Sólo `admin` |
+
+`auth.middleware.js` valida el JWT de la cookie `currentUser` y carga
+`req.user`. `authorize.middleware.js` recibe los roles permitidos y comprueba
+`req.user.role`. Ambos son reutilizables y están separados de las rutas.
+
+- **401 No autenticado:** no existe una sesión válida; falta la cookie, el JWT
+  es inválido o expiró.
+- **403 Sin permisos:** la sesión es válida, pero el rol o la propiedad del
+  evento no permiten realizar la acción.
+
+Al crear un evento, el servidor asigna `organizer` desde `req.user.id`; no
+confía en ese campo si llega en el body. Para cancelar un evento se usa
+`PATCH /api/events/:id` con `{ "status": "cancelled" }`.
+
 ## Casos de prueba
 
 Antes de entregar, se deben verificar los siguientes escenarios:
@@ -211,3 +247,7 @@ Antes de entregar, se deben verificar los siguientes escenarios:
 - `/current` con un JWT manipulado, inválido o expirado: responde `401`.
 - Logout: responde `200` y elimina la cookie `currentUser`.
 - Después del logout, una nueva petición a `/current` responde `401`.
+- `POST /api/events` como `user` responde `403`; como `organizer`, `201`.
+- `GET /api/users` como `organizer` responde `403`; como `admin`, `200`.
+- Cualquier ruta privada sin cookie responde `401`.
+- Un `organizer` que modifica un evento ajeno recibe `403`.

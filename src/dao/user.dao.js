@@ -12,6 +12,10 @@ class UserDao {
     async create(userData) {
         return  await User.create(userData);
     }
+
+    async getAll() {
+        return User.find().sort({ createdAt: -1 });
+    }
 }
 
 export default new UserDao();
