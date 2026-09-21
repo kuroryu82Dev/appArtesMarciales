@@ -1,6 +1,7 @@
 import express from 'express';
 import passport from 'passport';
 import sessionsController from '../controllers/sessions.controller.js';
+import authMiddleware from '../middlewares/auth.middleware.js';
 
 import HttpError from '../utils/http-error.js';
 
@@ -48,7 +49,7 @@ router.post(
 
 router.get(
     '/current',
-    authenticate('current', 'No autenticado'),
+    authMiddleware,
     sessionsController.current,
 );
 
