@@ -25,7 +25,11 @@ Iniciar en desarrollo con `npm run dev` o en modo normal con `npm start`.
 | Método | Ruta | Descripción |
 | --- | --- | --- |
 | GET | `/api/health` | Comprueba el estado de la API. |
-| GET | `/api/events` | Lista los eventos. |
+| GET | `/api/events` | Lista paginada de eventos con filtros. |
+| GET | `/api/events/:id` | Consulta un evento. |
+| POST | `/api/events` | Crea un evento (`organizer` o `admin`). |
+| PUT | `/api/events/:id` | Actualiza un evento autorizado. |
+| PATCH | `/api/events/:id/status` | Cambia el estado de un evento autorizado. |
 | GET | `/api/sessions` | Comprueba el estado del módulo de sesiones. |
 | POST | `/api/sessions/register` | Registra un usuario con rol `user`. |
 | POST | `/api/sessions/login` | Valida credenciales y crea la cookie `currentUser`. |
@@ -215,7 +219,8 @@ con privilegios se asignan mediante un proceso administrativo.
 | --- | --- | --- |
 | GET | `/api/sessions/current` | Cualquier usuario autenticado |
 | POST | `/api/events` | `organizer`, `admin` |
-| PATCH | `/api/events/:id` | `organizer` propietario, o `admin` |
+| PUT | `/api/events/:id` | `organizer` propietario, o `admin` |
+| PATCH | `/api/events/:id/status` | `organizer` propietario, o `admin` |
 | GET | `/api/users` | Sólo `admin` |
 
 `auth.middleware.js` valida el JWT de la cookie `currentUser` y carga
@@ -229,7 +234,7 @@ con privilegios se asignan mediante un proceso administrativo.
 
 Al crear un evento, el servidor asigna `organizer` desde `req.user.id`; no
 confía en ese campo si llega en el body. Para cancelar un evento se usa
-`PATCH /api/events/:id` con `{ "status": "cancelled" }`.
+`PATCH /api/events/:id/status` con `{ "status": "cancelled" }`.
 
 ## Casos de prueba
 
@@ -251,3 +256,32 @@ Antes de entregar, se deben verificar los siguientes escenarios:
 - `GET /api/users` como `organizer` responde `403`; como `admin`, `200`.
 - Cualquier ruta privada sin cookie responde `401`.
 - Un `organizer` que modifica un evento ajeno recibe `403`.
+
+## API de eventos
+
+| Método | Ruta | Acceso |
+| --- | --- | --- |
+| `POST` | `/api/events` | `organizer`, `admin` |
+| `GET` | `/api/events` | Público |
+| `GET` | `/api/events/:id` | Público |
+| `PUT` | `/api/events/:id` | Organizador propietario o `admin` |
+| `PATCH` | `/api/events/:id/status` | Organizador propietario o `admin` |
+
+Un evento requiere `title`, `description`, `category`, `date`, `location`,
+`capacity` y `price`. Su `organizer` es una referencia al usuario autenticado y
+no se toma del body. Los estados válidos son `draft`, `published`, `cancelled`
+y `finished`.
+
+El listado siempre está paginado y responde con `data`, `page`, `limit`,
+`total` y `totalPages`. Admite `status`, `category`, `location`, `dateFrom`,
+`dateTo`, `page` (por defecto 1), `limit` (por defecto 10, máximo 100) y `sort`.
+Se puede ordenar por `date`, `title`, `category`, `location`, `capacity`,
+`price` o `createdAt`; el prefijo `-` indica orden descendente. Ejemplo:
+`/api/events?status=published&category=workshop&page=2&limit=5&sort=date`.
+
+La fecha de un evento nuevo debe ser futura, `capacity` debe ser mayor que cero
+y `price` no puede ser negativo. Un organizador sólo modifica eventos propios;
+un administrador puede modificar cualquiera. Los eventos cancelados son
+inmutables y nunca se eliminan físicamente. Tampoco se puede publicar un evento
+finalizado o cuya fecha ya pasó. Para cancelar se envía
+`{ "status": "cancelled" }` a `PATCH /api/events/:id/status`.

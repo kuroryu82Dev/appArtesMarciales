@@ -1,26 +1,15 @@
 import { Router } from 'express';
-import {
-    createEvent,
-    getEvents,
-    updateEvent,
-} from '../controllers/events.controller.js';
+
+import { changeEventStatus, createEvent, getEventById, getEvents, updateEvent } from '../controllers/events.controller.js';
 import authMiddleware from '../middlewares/auth.middleware.js';
 import authorize from '../middlewares/authorize.middleware.js';
 
 const router = Router();
 
 router.get('/', getEvents);
-router.post(
-    '/',
-    authMiddleware,
-    authorize('organizer', 'admin'),
-    createEvent,
-);
-router.patch(
-    '/:id',
-    authMiddleware,
-    authorize('organizer', 'admin'),
-    updateEvent,
-);
+router.get('/:id', getEventById);
+router.post('/', authMiddleware, authorize('organizer', 'admin'), createEvent);
+router.put('/:id', authMiddleware, authorize('organizer', 'admin'), updateEvent);
+router.patch('/:id/status', authMiddleware, authorize('organizer', 'admin'), changeEventStatus);
 
 export default router;
