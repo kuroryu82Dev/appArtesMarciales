@@ -1,8 +1,12 @@
 import Event from '../models/Events.js';
 
 class EventsDao {
-    async getAll() {
-        return Event.find({ status: 'published' }).sort({ date: 1 });
+    async getAll(filter, { skip, limit, sort }) {
+        const [data, total] = await Promise.all([
+            Event.find(filter).sort(sort).skip(skip).limit(limit),
+            Event.countDocuments(filter),
+        ]);
+        return { data, total };
     }
 
     async create(eventData) {

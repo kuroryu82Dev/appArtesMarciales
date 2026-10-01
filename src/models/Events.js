@@ -9,7 +9,7 @@ const eventSchema = new mongoose.Schema(
         },
         description: {
             type: String,
-            default: '',
+            required: true,
             trim: true,
         },
         category: {
@@ -31,6 +31,11 @@ const eventSchema = new mongoose.Schema(
             required: true,
             min: 1,
         },
+        price: {
+            type: Number,
+            required: true,
+            min: 0,
+        },
         organizer: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
@@ -39,14 +44,18 @@ const eventSchema = new mongoose.Schema(
         },
         status: {
             type: String,
-            enum: ['published', 'cancelled'],
-            default: 'published',
+            enum: ['draft', 'published', 'cancelled', 'finished'],
+            default: 'draft',
         },
     },
     {
         timestamps: true,
+        versionKey: false,
     },
 );
+
+eventSchema.index({ status: 1, category: 1, date: 1 });
+eventSchema.index({ location: 1 });
 
 const Event = mongoose.model('Event', eventSchema);
 

@@ -1,8 +1,8 @@
 import eventsDao from '../dao/events.dao.js';
 
 class EventsRepository {
-    async getAll() {
-        return eventsDao.getAll();
+    async getAll(filter, options) {
+        return eventsDao.getAll(filter, options);
     }
 
     async create(eventData) {
