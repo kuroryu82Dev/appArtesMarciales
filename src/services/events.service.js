@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 
 import eventsRepository from '../repositories/events.repository.js';
 import HttpError from '../utils/http-error.js';
+import EventDTO from '../dto/event.dto.js';
 
 const EVENT_STATUSES = ['draft', 'published', 'cancelled', 'finished'];
 const EDITABLE_FIELDS = ['title', 'description', 'category', 'date', 'location', 'capacity', 'price'];
@@ -74,14 +75,14 @@ class EventsService {
             limit,
             sort: { [sortField]: descending ? -1 : 1 },
         });
-        return { data, page, limit, total, totalPages: Math.ceil(total / limit) };
+        return { data: data.map((event) => new EventDTO(event)), page, limit, total, totalPages: Math.ceil(total / limit) };
     }
 
     async getById(id) {
         requireValidId(id);
         const event = await eventsRepository.findById(id);
         if (!event) throw new HttpError('Evento no encontrado', 404);
-        return event;
+        return new EventDTO(event);
     }
 
     async create(eventData, user) {
@@ -104,7 +105,7 @@ class EventsService {
         const safeData = Object.fromEntries(
             Object.entries(eventData).filter(([key]) => [...EDITABLE_FIELDS, 'status'].includes(key)),
         );
-        return eventsRepository.create({ ...safeData, date, status, organizer: user.id });
+        return new EventDTO(await eventsRepository.create({ ...safeData, date, status, organizer: user.id }));
     }
 
     async update(id, changes, user) {
@@ -118,9 +119,14 @@ class EventsService {
             if (field in safeChanges) requireNonEmptyText(safeChanges[field], field);
         }
         validateNumbers(safeChanges);
-        if ('date' in safeChanges) safeChanges.date = parseDate(safeChanges.date);
+        if ('date' in safeChanges) {
+            safeChanges.date = parseDate(safeChanges.date);
+            if (safeChanges.date <= new Date()) {
+                throw new HttpError('La fecha del evento no puede estar en el pasado', 400);
+            }
+        }
         if (Object.keys(safeChanges).length === 0) throw new HttpError('No se enviaron campos editables', 400);
-        return eventsRepository.updateById(id, safeChanges);
+        return new EventDTO(await eventsRepository.updateById(id, safeChanges));
     }
 
     async changeStatus(id, status, user) {
@@ -131,7 +137,7 @@ class EventsService {
         if (status === 'published' && (event.status === 'finished' || event.date <= new Date())) {
             throw new HttpError('No se puede publicar un evento finalizado', 400);
         }
-        return eventsRepository.updateById(id, { status });
+        return new EventDTO(await eventsRepository.updateById(id, { status }));
     }
 
     assertCanModify(event, user) {

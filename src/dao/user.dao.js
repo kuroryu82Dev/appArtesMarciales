@@ -1,6 +1,14 @@
 import User from '../models/User.js';
 
 class UserDao {
+    async findById(id) {
+        return User.findById(id);
+    }
+
+    async findOne(filter) {
+        return User.findOne(filter);
+    }
+
     async findByEmail(email) {
         return await User.findOne({ email });
     }
@@ -15,6 +23,10 @@ class UserDao {
 
     async getAll() {
         return User.find().sort({ createdAt: -1 });
+    }
+
+    async updateById(id, changes) {
+        return User.findByIdAndUpdate(id, changes, { new: true, runValidators: true });
     }
 }
 

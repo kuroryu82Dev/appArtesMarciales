@@ -7,6 +7,9 @@ process.env.JWT_SECRET = 'test-secret';
 const { default: authMiddleware } = await import(
     '../src/middlewares/auth.middleware.js'
 );
+const { default: initializePassport } = await import(
+    '../src/config/passport.config.js'
+);
 const { default: authorize } = await import(
     '../src/middlewares/authorize.middleware.js'
 );
@@ -16,6 +19,8 @@ const { default: eventsService } = await import(
 const { default: eventsRepository } = await import(
     '../src/repositories/events.repository.js'
 );
+
+initializePassport();
 
 const responseMock = () => {
     const response = {
@@ -33,31 +38,25 @@ const responseMock = () => {
     return response;
 };
 
-test('una ruta privada sin cookie responde 401', () => {
-    const response = responseMock();
-    let called = false;
-
-    authMiddleware({ cookies: {} }, response, () => {
-        called = true;
+test('una ruta privada sin cookie produce un error 401', async () => {
+    const error = await new Promise((resolve) => {
+        authMiddleware({ cookies: {}, headers: {} }, responseMock(), resolve);
     });
-
-    assert.equal(response.statusCode, 401);
-    assert.equal(response.body.message, 'No autenticado');
-    assert.equal(called, false);
+    assert.equal(error.statusCode, 401);
+    assert.equal(error.message, 'No autenticado');
 });
 
-test('un token expirado responde 401', () => {
+test('un token expirado produce un error 401', async () => {
     const token = jwt.sign(
         { id: '1', email: 'user@example.com', role: 'user' },
         process.env.JWT_SECRET,
         { expiresIn: -1 },
     );
-    const response = responseMock();
-
-    authMiddleware({ cookies: { currentUser: token } }, response, () => {});
-
-    assert.equal(response.statusCode, 401);
-    assert.equal(response.body.message, 'No autenticado');
+    const error = await new Promise((resolve) => {
+        authMiddleware({ cookies: { currentUser: token }, headers: {} }, responseMock(), resolve);
+    });
+    assert.equal(error.statusCode, 401);
+    assert.equal(error.message, 'No autenticado');
 });
 
 test('un user autenticado no puede crear eventos', () => {

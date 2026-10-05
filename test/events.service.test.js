@@ -32,13 +32,14 @@ test('construye filtros, paginación y ordenamiento', async () => {
     let received;
     eventsRepository.getAll = async (filter, options) => {
         received = { filter, options };
-        return { data: ['event'], total: 12 };
+        return { data: [{ title: 'Evento' }], total: 12 };
     };
     try {
         const result = await eventsService.getAll({ status: 'published', category: 'workshop', page: '2', limit: '5', sort: '-date' });
         assert.deepEqual(received.filter, { status: 'published', category: 'workshop' });
         assert.deepEqual(received.options, { skip: 5, limit: 5, sort: { date: -1 } });
-        assert.deepEqual(result, { data: ['event'], page: 2, limit: 5, total: 12, totalPages: 3 });
+        assert.equal(result.data[0].title, 'Evento');
+        assert.deepEqual({ ...result, data: undefined }, { data: undefined, page: 2, limit: 5, total: 12, totalPages: 3 });
     } finally { eventsRepository.getAll = original; }
 });
 
@@ -48,9 +49,9 @@ test('dueño y admin modifican; organizer ajeno recibe 403', async () => {
     eventsRepository.findById = async () => ({ organizer: { toString: () => 'owner' }, status: 'draft' });
     eventsRepository.updateById = async (_id, changes) => changes;
     try {
-        assert.deepEqual(await eventsService.update('507f1f77bcf86cd799439011', { title: 'Propio' }, { id: 'owner', role: 'organizer' }), { title: 'Propio' });
+        assert.equal((await eventsService.update('507f1f77bcf86cd799439011', { title: 'Propio' }, { id: 'owner', role: 'organizer' })).title, 'Propio');
         await assert.rejects(eventsService.update('507f1f77bcf86cd799439011', { title: 'Ajeno' }, { id: 'other', role: 'organizer' }), (error) => error.statusCode === 403);
-        assert.deepEqual(await eventsService.update('507f1f77bcf86cd799439011', { title: 'Admin' }, { id: 'other', role: 'admin' }), { title: 'Admin' });
+        assert.equal((await eventsService.update('507f1f77bcf86cd799439011', { title: 'Admin' }, { id: 'other', role: 'admin' })).title, 'Admin');
     } finally {
         eventsRepository.findById = originalFind;
         eventsRepository.updateById = originalUpdate;
@@ -62,6 +63,17 @@ test('un evento cancelado no puede cambiar de estado', async () => {
     eventsRepository.findById = async () => ({ organizer: { toString: () => 'owner' }, status: 'cancelled', date: new Date(Date.now() + 1000) });
     try {
         await assert.rejects(eventsService.changeStatus('507f1f77bcf86cd799439011', 'published', { id: 'owner', role: 'organizer' }), (error) => error.statusCode === 409);
+    } finally { eventsRepository.findById = original; }
+});
+
+test('rechaza actualizar la fecha de un evento hacia el pasado', async () => {
+    const original = eventsRepository.findById;
+    eventsRepository.findById = async () => ({ organizer: { toString: () => 'owner' }, status: 'draft' });
+    try {
+        await assert.rejects(
+            eventsService.update('507f1f77bcf86cd799439011', { date: '2020-01-01' }, { id: 'owner', role: 'organizer' }),
+            (error) => error.statusCode === 400,
+        );
     } finally { eventsRepository.findById = original; }
 });
 

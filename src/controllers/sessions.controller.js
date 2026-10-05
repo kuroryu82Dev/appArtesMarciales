@@ -1,5 +1,6 @@
 import sessionsService from '../services/sessions.service.js';
 import jwtUtils from '../utils/jwt.js';
+import UserDTO from '../dto/user.dto.js';
 
 export const getSessionStatus = async (req, res, next) => {
     try {
@@ -17,7 +18,7 @@ export const getSessionStatus = async (req, res, next) => {
 export const register = (req, res) => {
     res.status(201).json({
         status: 'success',
-        payload: req.user,
+        payload: new UserDTO(req.user),
     });
 };
 
@@ -43,7 +44,7 @@ export const login = (req, res) => {
 export const current = (req, res) => {
     res.status(200).json({
         status: 'success',
-        payload: req.user,
+        payload: new UserDTO(req.user),
     });
 };
 
