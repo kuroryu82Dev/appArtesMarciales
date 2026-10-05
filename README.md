@@ -223,8 +223,8 @@ con privilegios se asignan mediante un proceso administrativo.
 | PATCH | `/api/events/:id/status` | `organizer` propietario, o `admin` |
 | GET | `/api/users` | Sólo `admin` |
 
-`auth.middleware.js` valida el JWT de la cookie `currentUser` y carga
-`req.user`. `authorize.middleware.js` recibe los roles permitidos y comprueba
+`auth.middleware.js` delega la validación del JWT de la cookie `currentUser` a
+la estrategia Passport `current` y carga `req.user`. `authorize.middleware.js` recibe los roles permitidos y comprueba
 `req.user.role`. Ambos son reutilizables y están separados de las rutas.
 
 - **401 No autenticado:** no existe una sesión válida; falta la cookie, el JWT
@@ -266,6 +266,7 @@ Antes de entregar, se deben verificar los siguientes escenarios:
 | `GET` | `/api/events/:id` | Público |
 | `PUT` | `/api/events/:id` | Organizador propietario o `admin` |
 | `PATCH` | `/api/events/:id/status` | Organizador propietario o `admin` |
+| `PATCH` | `/api/events/:id` | Actualización parcial compatible; propietario o `admin` |
 
 Un evento requiere `title`, `description`, `category`, `date`, `location`,
 `capacity` y `price`. Su `organizer` es una referencia al usuario autenticado y
@@ -279,9 +280,41 @@ Se puede ordenar por `date`, `title`, `category`, `location`, `capacity`,
 `price` o `createdAt`; el prefijo `-` indica orden descendente. Ejemplo:
 `/api/events?status=published&category=workshop&page=2&limit=5&sort=date`.
 
-La fecha de un evento nuevo debe ser futura, `capacity` debe ser mayor que cero
+La fecha de un evento nuevo o actualizado por `PUT`/`PATCH` debe ser futura, `capacity` debe ser mayor que cero
 y `price` no puede ser negativo. Un organizador sólo modifica eventos propios;
 un administrador puede modificar cualquiera. Los eventos cancelados son
 inmutables y nunca se eliminan físicamente. Tampoco se puede publicar un evento
 finalizado o cuya fecha ya pasó. Para cancelar se envía
 `{ "status": "cancelled" }` a `PATCH /api/events/:id/status`.
+
+## Tickets e inscripciones
+
+| Método | Ruta | Descripción |
+| --- | --- | --- |
+| `POST` | `/api/tickets` | Inscribe al usuario autenticado; body: `{ "eventId": "..." }`. |
+| `GET` | `/api/tickets/my` | Devuelve los tickets del usuario autenticado. |
+| `PATCH` | `/api/tickets/:id/cancel` | Cancela un ticket propio; un `admin` puede cancelar cualquiera. |
+
+Sólo se permite la inscripción en eventos publicados y futuros. El servicio
+rechaza inscripciones duplicadas y eventos sin cupo con `409`. La cancelación
+es lógica: el ticket cambia a estado `cancelled` y no se elimina.
+
+## Arquitectura en capas
+
+La aplicación separa responsabilidades de la siguiente manera:
+
+- **Models:** definen los esquemas de Mongoose. No son consumidos fuera de los DAO.
+- **DAO:** `UserDAO`, `EventsDAO` y `TicketsDAO` son la única capa que importa
+  modelos y ejecuta consultas de persistencia.
+- **Repositories:** envuelven cada DAO y ofrecen operaciones orientadas al
+  dominio, como buscar usuarios por email, contar tickets activos o cancelar
+  una inscripción.
+- **Services:** concentran validaciones, permisos, transiciones de estado,
+  control de cupos y duplicados. Sólo consumen repositories.
+- **DTO:** controlan las respuestas de usuarios, eventos y tickets. Eliminan
+  campos sensibles, incluido `password`, aun cuando existan documentos populados.
+- **Controllers:** extraen datos del request, llaman a un service y construyen
+  la respuesta HTTP; no acceden a Mongoose, DAO ni repositories.
+- **Middlewares:** Passport autentica con la estrategia `current`, el middleware
+  de roles autoriza y el middleware central de errores traduce fallos de negocio
+  a códigos `400`, `401`, `403`, `404`, `409` o `500`.

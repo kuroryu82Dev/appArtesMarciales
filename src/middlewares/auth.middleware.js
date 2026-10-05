@@ -1,31 +1,14 @@
-import { verifyToken } from '../utils/jwt.js';
+import passport from 'passport';
+
+import HttpError from '../utils/http-error.js';
 
 const authMiddleware = (req, res, next) => {
-    const token = req.cookies?.currentUser;
-
-    if (!token) {
-        return res.status(401).json({
-            status: 'error',
-            message: 'No autenticado',
-        });
-    }
-
-    try {
-        const payload = verifyToken(token);
-
-        req.user = {
-            id: payload.id,
-            email: payload.email,
-            role: payload.role,
-        };
-
+    passport.authenticate('current', { session: false }, (error, user) => {
+        if (error) return next(error);
+        if (!user) return next(new HttpError('No autenticado', 401));
+        req.user = user;
         return next();
-    } catch {
-        return res.status(401).json({
-            status: 'error',
-            message: 'No autenticado',
-        });
-    }
+    })(req, res, next);
 };
 
 export default authMiddleware;

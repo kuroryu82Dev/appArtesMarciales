@@ -11,5 +11,6 @@ router.get('/:id', getEventById);
 router.post('/', authMiddleware, authorize('organizer', 'admin'), createEvent);
 router.put('/:id', authMiddleware, authorize('organizer', 'admin'), updateEvent);
 router.patch('/:id/status', authMiddleware, authorize('organizer', 'admin'), changeEventStatus);
+router.patch('/:id', authMiddleware, authorize('organizer', 'admin'), updateEvent);
 
 export default router;
