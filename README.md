@@ -16,6 +16,11 @@ MONGO_URL=mongodb://127.0.0.1:27017/plataforma_eventos
 JWT_SECRET=un_secreto_largo_y_seguro
 JWT_EXPIRES_IN=1h
 NODE_ENV=development
+MAIL_HOST=smtp.example.com
+MAIL_PORT=587
+MAIL_USER=usuario_smtp
+MAIL_PASS=contraseña_smtp
+MAIL_FROM="Plataforma de Eventos <no-reply@example.com>"
 ```
 
 Iniciar en desarrollo con `npm run dev` o en modo normal con `npm start`.
@@ -198,6 +203,11 @@ en `passport.config.js`, sin modificar `app.js`.
 | `MONGO_URL` | Conexión a MongoDB. |
 | `JWT_SECRET` | Clave utilizada para firmar y validar JWT. |
 | `JWT_EXPIRES_IN` | Duración del JWT, por ejemplo `1h`. |
+| `MAIL_HOST` | Servidor SMTP utilizado por Nodemailer. |
+| `MAIL_PORT` | Puerto SMTP; normalmente `587` o `465`. |
+| `MAIL_USER` | Usuario de la cuenta SMTP. |
+| `MAIL_PASS` | Contraseña o token de aplicación SMTP. |
+| `MAIL_FROM` | Remitente visible de los correos de confirmación. |
 
 ## Roles y autorización
 
@@ -289,15 +299,30 @@ finalizado o cuya fecha ya pasó. Para cancelar se envía
 
 ## Tickets e inscripciones
 
-| Método | Ruta | Descripción |
+| Método | Ruta | Acceso y descripción |
 | --- | --- | --- |
-| `POST` | `/api/tickets` | Inscribe al usuario autenticado; body: `{ "eventId": "..." }`. |
-| `GET` | `/api/tickets/my` | Devuelve los tickets del usuario autenticado. |
-| `PATCH` | `/api/tickets/:id/cancel` | Cancela un ticket propio; un `admin` puede cancelar cualquiera. |
+| `POST` | `/api/events/:eid/tickets` | Usuario autenticado; body: `{ "quantity": 2 }`. |
+| `GET` | `/api/tickets/my-tickets` | Usuario autenticado; devuelve sus propios tickets con `title`, `date` y `location` del evento. |
+| `GET` | `/api/events/:eid/tickets` | Organizador propietario del evento o `admin`. |
+| `PATCH` | `/api/tickets/:tid/cancel` | Propietario del ticket o `admin`. |
 
-Sólo se permite la inscripción en eventos publicados y futuros. El servicio
-rechaza inscripciones duplicadas y eventos sin cupo con `409`. La cancelación
-es lógica: el ticket cambia a estado `cancelled` y no se elimina.
+Los estados permitidos son `confirmed`, `pending` y `cancelled`. Una
+inscripción confirmada recibe un `reservationCode` único y dispara un email de
+confirmación mediante Nodemailer.
+
+Para inscribirse, el evento debe existir, estar publicado y no haber finalizado.
+`quantity` debe ser un entero mayor que cero y el usuario no puede tener otra
+inscripción activa para el mismo evento. Los cupos ocupados se calculan sumando
+`quantity` de tickets `confirmed` y `pending`; los tickets `cancelled` no se
+cuentan.
+
+Cancelar nunca elimina el documento: cambia su estado a `cancelled` y registra
+`cancelledAt`. Como las cancelaciones se excluyen del cálculo, sus cupos quedan
+disponibles automáticamente.
+
+Las credenciales SMTP deben configurarse únicamente mediante `MAIL_HOST`,
+`MAIL_PORT`, `MAIL_USER`, `MAIL_PASS` y `MAIL_FROM`. No deben guardarse
+credenciales reales en el repositorio.
 
 ## Arquitectura en capas
 

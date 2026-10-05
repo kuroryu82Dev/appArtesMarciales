@@ -12,7 +12,7 @@ test('UserDTO nunca expone password', () => {
 
 test('TicketDTO filtra password de usuario y organizador populados', () => {
     const dto = new TicketDTO({
-        _id: 'ticket-id', code: 'ABC', status: 'active',
+        _id: 'ticket-id', reservationCode: 'ABC', status: 'confirmed', quantity: 2,
         user: { _id: 'user-id', email: 'user@mail.com', role: 'user', password: 'hash-user' },
         event: {
             _id: 'event-id', title: 'Evento', status: 'published',
@@ -21,4 +21,6 @@ test('TicketDTO filtra password de usuario y organizador populados', () => {
     });
     assert.equal(dto.user.password, undefined);
     assert.equal(dto.event.organizer.password, undefined);
+    assert.equal(dto.reservationCode, 'ABC');
+    assert.equal(dto.quantity, 2);
 });
