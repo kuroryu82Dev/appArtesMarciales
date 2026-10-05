@@ -3,10 +3,13 @@ import ticketsDao from '../dao/tickets.dao.js';
 class TicketsRepository {
     createRegistration(data) { return ticketsDao.create(data); }
     findActiveRegistration(userId, eventId) { return ticketsDao.findActiveByUserAndEvent(userId, eventId); }
-    countActiveTickets(eventId) { return ticketsDao.countActiveByEvent(eventId); }
+    getReservedQuantity(eventId) { return ticketsDao.sumActiveQuantityByEvent(eventId); }
     findMyTickets(userId) { return ticketsDao.findByUser(userId); }
+    findEventTickets(eventId) { return ticketsDao.findByEvent(eventId); }
     findTicketById(id) { return ticketsDao.findById(id); }
-    cancelTicket(id) { return ticketsDao.updateById(id, { status: 'cancelled' }); }
+    cancelTicket(id, cancelledAt) {
+        return ticketsDao.updateById(id, { status: 'cancelled', cancelledAt });
+    }
 }
 
 export default new TicketsRepository();
