@@ -320,6 +320,34 @@ Cancelar nunca elimina el documento: cambia su estado a `cancelled` y registra
 `cancelledAt`. Como las cancelaciones se excluyen del cálculo, sus cupos quedan
 disponibles automáticamente.
 
+La cancelación envía un correo al propietario del ticket, también cuando la
+realiza un administrador, con el evento, código de reserva y cantidad.
+La confirmación y la cancelación se guardan antes de enviar el correo. Los
+services aíslan el envío con `try/catch`: un fallo SMTP se registra con el tipo
+de notificación y el ID del ticket, sin exponer credenciales, y no cambia la
+respuesta exitosa de la API. Se limita la espera SMTP mediante timeouts de
+10 segundos para conexión, saludo e inactividad del socket.
+Esta implementación espera el intento de envío y no incluye una cola persistente
+ni reintentos automáticos; si falla, el ticket conserva su estado guardado.
+
+### Verificación antes de entregar
+
+Ejecutar `npm test` para verificar DTOs, permisos, reglas de eventos y tickets,
+notificaciones de cancelación y fallos SMTP que no invalidan las operaciones.
+Estas pruebas usan dobles de repositories y SMTP; no necesitan servicios externos.
+
+Con MongoDB y SMTP configurados, comprobar además el flujo real:
+
+1. Registrar un usuario y hacer login conservando la cookie.
+2. Consultar `/api/sessions/current` y verificar que no devuelve `password`.
+3. Con un organizador o administrador, crear un evento futuro publicado.
+4. Con el usuario, inscribirse mediante `/api/events/:eid/tickets`.
+5. Consultar `/api/tickets/my-tickets` y verificar el evento relacionado.
+6. Cancelar mediante `/api/tickets/:tid/cancel`, comprobar el correo y los cupos liberados.
+7. Consultar las inscripciones como organizador y verificar que el usuario populado no expone `password`.
+8. Repetir con SMTP inaccesible: inscripción y cancelación deben seguir respondiendo `201` y `200`.
+9. Verificar `401` sin sesión, `403` sin permisos y `409` al duplicar una inscripción activa o cancelar dos veces.
+
 Las credenciales SMTP deben configurarse únicamente mediante `MAIL_HOST`,
 `MAIL_PORT`, `MAIL_USER`, `MAIL_PASS` y `MAIL_FROM`. No deben guardarse
 credenciales reales en el repositorio.

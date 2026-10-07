@@ -17,6 +17,9 @@ class EmailService {
                 host: env.mailHost,
                 port: env.mailPort,
                 secure: env.mailPort === 465,
+                connectionTimeout: 10_000,
+                greetingTimeout: 10_000,
+                socketTimeout: 10_000,
                 auth: { user: env.mailUser, pass: env.mailPass },
             });
         }
@@ -30,6 +33,24 @@ class EmailService {
             subject: `Inscripción confirmada: ${event.title}`,
             text: [
                 `Tu inscripción a ${event.title} fue confirmada.`,
+                `Código de reserva: ${ticket.reservationCode}`,
+                `Cantidad: ${ticket.quantity}`,
+                `Fecha: ${new Date(event.date).toLocaleString('es-MX')}`,
+                `Lugar: ${event.location}`,
+            ].join('\n'),
+        });
+    }
+
+    async sendTicketCancellation({ to, event, ticket }) {
+        if (!to || !event?.title) {
+            throw new HttpError('Faltan datos para notificar la cancelación', 500);
+        }
+        await this.getTransporter().sendMail({
+            from: env.mailFrom,
+            to,
+            subject: `Inscripción cancelada: ${event.title}`,
+            text: [
+                `Tu inscripción a ${event.title} fue cancelada.`,
                 `Código de reserva: ${ticket.reservationCode}`,
                 `Cantidad: ${ticket.quantity}`,
                 `Fecha: ${new Date(event.date).toLocaleString('es-MX')}`,

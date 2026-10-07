@@ -33,22 +33,23 @@ class TicketsService {
             throw new HttpError(`Cupos insuficientes: quedan ${Math.max(available, 0)}`, 409);
         }
 
+        let ticket;
         try {
-            const ticket = await ticketsRepository.createRegistration({
+            ticket = await ticketsRepository.createRegistration({
                 user: user.id,
                 event: eventId,
                 status: 'confirmed',
                 quantity,
                 reservationCode: randomUUID(),
             });
-            await emailService.sendTicketConfirmation({ to: user.email, event, ticket });
-            return new TicketDTO(ticket);
         } catch (error) {
             if (error?.code === 11000) {
                 throw new HttpError('El usuario ya tiene una inscripción activa para este evento', 409);
             }
             throw error;
         }
+        await this.notify('sendTicketConfirmation', { to: user.email, event, ticket });
+        return new TicketDTO(ticket);
     }
 
     async getMine(user) {
@@ -75,7 +76,26 @@ class TicketsService {
             throw new HttpError('No tenés permisos para cancelar este ticket', 403);
         }
         if (ticket.status === 'cancelled') throw new HttpError('El ticket ya está cancelado', 409);
-        return new TicketDTO(await ticketsRepository.cancelTicket(id, new Date()));
+        const cancelledTicket = await ticketsRepository.cancelTicket(id, new Date());
+        await this.notify('sendTicketCancellation', {
+            to: cancelledTicket.user?.email,
+            event: cancelledTicket.event,
+            ticket: cancelledTicket,
+        });
+        return new TicketDTO(cancelledTicket);
+    }
+
+    async notify(method, data) {
+        try {
+            await emailService[method](data);
+        } catch (error) {
+            // El cambio ya está guardado: SMTP no debe convertirlo en un error de API.
+            console.error('No se pudo enviar la notificación del ticket', {
+                notification: method,
+                ticketId: data.ticket._id?.toString(),
+                code: error.code ?? error.name,
+            });
+        }
     }
 }
 

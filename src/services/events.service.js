@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import { isValidObjectId } from '../utils/object-id.js';
 
 import eventsRepository from '../repositories/events.repository.js';
 import HttpError from '../utils/http-error.js';
@@ -9,7 +9,7 @@ const EDITABLE_FIELDS = ['title', 'description', 'category', 'date', 'location',
 const SORTABLE_FIELDS = ['date', 'title', 'category', 'location', 'capacity', 'price', 'createdAt'];
 
 const requireValidId = (id) => {
-    if (!mongoose.isValidObjectId(id)) throw new HttpError('Evento no encontrado', 404);
+    if (!isValidObjectId(id)) throw new HttpError('Evento no encontrado', 404);
 };
 
 const requireNonEmptyText = (value, field) => {
