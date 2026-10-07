@@ -23,6 +23,7 @@ const snapshot = () => ({
     cancel: ticketsRepository.cancelTicket,
     findEventTickets: ticketsRepository.findEventTickets,
     send: emailService.sendTicketConfirmation,
+    sendCancellation: emailService.sendTicketCancellation,
 });
 
 const restore = (original) => {
@@ -34,6 +35,7 @@ const restore = (original) => {
     ticketsRepository.cancelTicket = original.cancel;
     ticketsRepository.findEventTickets = original.findEventTickets;
     emailService.sendTicketConfirmation = original.send;
+    emailService.sendTicketCancellation = original.sendCancellation;
 };
 
 test('confirma inscripción y envía email', async () => {
@@ -110,6 +112,7 @@ test('cancelación propia registra cancelledAt y libera el cupo', async () => {
     ticketsRepository.getReservedQuantity = async () => active ? 2 : 0;
     ticketsRepository.createRegistration = async (data) => ({ _id: 'new-ticket', ...data });
     emailService.sendTicketConfirmation = async () => {};
+    emailService.sendTicketCancellation = async () => {};
     try {
         const cancelled = await ticketsService.cancel(ticketId, { id: 'owner', role: 'user' });
         assert.equal(cancelled.status, 'cancelled');
@@ -136,5 +139,76 @@ test('sólo organizer propietario o admin lista tickets del evento', async () =>
         await assert.rejects(ticketsService.getByEvent(eventId, { id: 'other', role: 'organizer' }), (error) => error.statusCode === 403);
         assert.deepEqual(await ticketsService.getByEvent(eventId, { id: 'organizer-id', role: 'organizer' }), []);
         assert.deepEqual(await ticketsService.getByEvent(eventId, { id: 'admin', role: 'admin' }), []);
+    } finally { restore(original); }
+});
+
+test('un fallo SMTP no invalida la inscripción guardada ni se confunde con un duplicado', async (t) => {
+    const original = snapshot();
+    const logs = t.mock.method(console, 'error', () => {});
+    eventsRepository.findById = async () => publishedEvent();
+    ticketsRepository.findActiveRegistration = async () => null;
+    ticketsRepository.getReservedQuantity = async () => 0;
+    ticketsRepository.createRegistration = async (data) => ({ _id: ticketId, ...data });
+    emailService.sendTicketConfirmation = async () => { throw Object.assign(new Error('SMTP'), { code: 11000 }); };
+    try {
+        const result = await ticketsService.register(eventId, 1, { id: 'owner', email: 'owner@mail.com' });
+        assert.equal(result.status, 'confirmed');
+        assert.equal(result._id, ticketId);
+        assert.equal(logs.mock.callCount(), 1);
+    } finally { restore(original); }
+});
+
+test('cancelación por admin notifica al propietario después de guardar', async () => {
+    const original = snapshot();
+    const ticket = {
+        _id: ticketId, user: { _id: 'owner', email: 'owner@mail.com', password: 'hash' },
+        event: publishedEvent(), status: 'confirmed', reservationCode: 'ABC', quantity: 2,
+    };
+    let saved = false;
+    let sent;
+    ticketsRepository.findTicketById = async () => ticket;
+    ticketsRepository.cancelTicket = async (_id, date) => {
+        saved = true;
+        return { ...ticket, status: 'cancelled', cancelledAt: date };
+    };
+    emailService.sendTicketCancellation = async (data) => {
+        assert.equal(saved, true);
+        sent = data;
+    };
+    try {
+        const result = await ticketsService.cancel(ticketId, { id: 'admin', role: 'admin', email: 'admin@mail.com' });
+        assert.equal(sent.to, 'owner@mail.com');
+        assert.equal(sent.ticket.status, 'cancelled');
+        assert.equal(sent.event.title, 'Open marcial');
+        assert.equal(result.status, 'cancelled');
+        assert.equal(result.user.password, undefined);
+    } finally { restore(original); }
+});
+
+test('un fallo SMTP no invalida la cancelación guardada', async (t) => {
+    const original = snapshot();
+    const logs = t.mock.method(console, 'error', () => {});
+    ticketsRepository.findTicketById = async () => ({ user: 'owner', status: 'confirmed' });
+    ticketsRepository.cancelTicket = async (_id, date) => ({ _id: ticketId, status: 'cancelled', cancelledAt: date });
+    emailService.sendTicketCancellation = async () => { throw new Error('SMTP unavailable'); };
+    try {
+        const result = await ticketsService.cancel(ticketId, { id: 'owner', role: 'user' });
+        assert.equal(result.status, 'cancelled');
+        assert.ok(result.cancelledAt instanceof Date);
+        assert.equal(logs.mock.callCount(), 1);
+    } finally { restore(original); }
+});
+
+test('cancelaciones rechazadas no guardan ni envían email', async (t) => {
+    const original = snapshot();
+    const send = t.mock.method(emailService, 'sendTicketCancellation', async () => {});
+    const save = t.mock.method(ticketsRepository, 'cancelTicket', async () => {});
+    try {
+        ticketsRepository.findTicketById = async () => ({ user: 'owner', status: 'confirmed' });
+        await assert.rejects(ticketsService.cancel(ticketId, { id: 'other', role: 'user' }), (error) => error.statusCode === 403);
+        ticketsRepository.findTicketById = async () => ({ user: 'owner', status: 'cancelled' });
+        await assert.rejects(ticketsService.cancel(ticketId, { id: 'owner', role: 'user' }), (error) => error.statusCode === 409);
+        assert.equal(send.mock.callCount(), 0);
+        assert.equal(save.mock.callCount(), 0);
     } finally { restore(original); }
 });
