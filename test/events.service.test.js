@@ -10,6 +10,12 @@ const validEvent = (overrides = {}) => ({
     capacity: 30, price: 250, ...overrides,
 });
 
+test('rechaza filtros y ordenamiento estructurados con 400', async () => {
+    for (const query of [{ sort: ['date', 'price'] }, { category: { $ne: '' } }, { location: ['Dojo'] }]) {
+        await assert.rejects(eventsService.getAll(query), (error) => error.statusCode === 400);
+    }
+});
+
 test('asigna organizer desde el usuario y no desde el body', async () => {
     const original = eventsRepository.create;
     let saved;

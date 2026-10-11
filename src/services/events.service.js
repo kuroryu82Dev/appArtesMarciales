@@ -46,6 +46,11 @@ const parsePositiveInteger = (value, fallback, field, max) => {
 
 class EventsService {
     async getAll(query = {}) {
+        for (const field of ['status', 'category', 'location', 'dateFrom', 'dateTo', 'page', 'limit', 'sort']) {
+            if (query[field] !== undefined && typeof query[field] !== 'string') {
+                throw new HttpError(`El parámetro ${field} debe ser un texto`, 400);
+            }
+        }
         const filter = {};
         if (query.status) {
             if (!EVENT_STATUSES.includes(query.status)) throw new HttpError('Estado de evento inválido', 400);
