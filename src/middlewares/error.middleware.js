@@ -1,4 +1,8 @@
 const errorMiddleware = (error, req, res, next) => {
+    if (error.type === 'entity.parse.failed') {
+        return res.status(400).json({ status: 'error', message: 'El cuerpo debe contener JSON válido' });
+    }
+
     if (error.name === 'ValidationError' || error.name === 'CastError') {
         return res.status(400).json({
         status: 'error',

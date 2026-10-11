@@ -4,6 +4,9 @@ API REST construida con Node.js, Express, MongoDB y Mongoose. Incluye registro, 
 
 ## Instalación
 
+Requisitos: Node.js 20.19 o superior, npm, MongoDB y una cuenta SMTP para recibir
+las notificaciones. Ejecutar `npm test` para las pruebas automáticas.
+
 ```bash
 npm install
 ```
@@ -247,6 +250,68 @@ confía en ese campo si llega en el body. Para cancelar un evento se usa
 `PATCH /api/events/:id/status` con `{ "status": "cancelled" }`.
 
 ## Casos de prueba
+
+### Crear usuarios de prueba
+
+Registrar tres cuentas con `/api/sessions/register`: `user@example.com`,
+`organizer@example.com` y `admin@example.com`, con nombres, apellidos y una
+contraseña de prueba de al menos ocho caracteres. Todas nacen con rol `user`.
+En una base de datos local de pruebas, abrir `mongosh` o MongoDB Compass y
+asignar los roles administrativos (usar la base configurada en `MONGO_URL`):
+
+```javascript
+use plataforma_eventos
+db.users.updateOne({ email: 'organizer@example.com' }, { $set: { role: 'organizer' } })
+db.users.updateOne({ email: 'admin@example.com' }, { $set: { role: 'admin' } })
+```
+
+Hacer login después de cambiar el rol: el JWT incorpora el rol al emitirse.
+Conservar una cookie independiente por cuenta en Postman o archivos separados
+con `curl -c organizer.cookies`, `curl -c user.cookies` y `curl -c admin.cookies`.
+
+### Ejemplo de evento e inscripción
+
+Con la cookie del organizador, enviar `POST /api/events`:
+
+```json
+{
+  "title": "Seminario de karate",
+  "description": "Técnicas y práctica supervisada",
+  "category": "workshop",
+  "date": "2030-06-15T16:00:00.000Z",
+  "location": "Dojo central",
+  "capacity": 1,
+  "price": 250,
+  "status": "published"
+}
+```
+
+Usar siempre una fecha futura. Guardar `payload.id` como `EVENT_ID`.
+Con la cookie del usuario, enviar `POST /api/events/EVENT_ID/tickets` con
+`{ "quantity": 1 }`; responde `201` con el ticket y envía la confirmación SMTP.
+Guardar `payload.id` como `TICKET_ID`. Consultar `/api/tickets/my-tickets`.
+Repetir la inscripción devuelve `409`. Otro usuario recibe `409` por falta de
+cupo. Enviar `PATCH /api/tickets/TICKET_ID/cancel` libera el cupo y permite
+inscribirse otra vez. El organizador consulta `/api/events/EVENT_ID/tickets`.
+
+Consultar `/api/events?status=published&page=2&limit=5` devuelve `data`, `page`,
+`limit`, `total` y `totalPages`, incluso si la página queda vacía.
+
+### Alcance de las pruebas
+
+La prueba HTTP de sesiones ejecuta Express y Passport con persistencia simulada;
+verifica registro, bcrypt, rol público, JWT, cookies, permisos, logout y JSON
+inválido. No certifica una conexión real a MongoDB ni la recepción de correo.
+El control de cupos consulta tickets antes de crear la reserva; todavía no es
+atómico frente a inscripciones simultáneas de distintos usuarios. Para uso con
+alta concurrencia se requiere una reserva atómica o transacciones.
+
+### Entrega en GitHub
+
+El remoto configurado es `https://github.com/kuroryu82Dev/appArtesMarciales`.
+Antes de entregar, publicar los cambios, comprobar que el repositorio sea
+público y realizar el flujo real con MongoDB y SMTP. `.env` y `node_modules`
+están excluidos por `.gitignore`; entregar `.env.example` con valores de ejemplo.
 
 Antes de entregar, se deben verificar los siguientes escenarios:
 
